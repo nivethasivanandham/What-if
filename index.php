@@ -311,7 +311,6 @@ function seed_database_if_empty($pdo) {
         foreach ($restaurants as $r) {
             $ins->execute($r);
         }
-    }
 
         // Get seeded restaurant IDs
         $r_ids = [];
