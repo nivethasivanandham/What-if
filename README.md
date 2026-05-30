@@ -1,6 +1,6 @@
 # What If — Discover The Best Food & Drinks 🍕
 
-Welcome to the **"What If"** food delivery platform (Zomato/Swiggy style) engineered with Vanilla JS, PHP Sessions, and MySQL PDO. This project serves a complete, high-performance web experience packaged in both a **dynamic database-driven system (`index.php`)** and a **portable static prototype (`index.html`)** for testing and seamless onboarding.
+Welcome to the **"What If"** food delivery platform (Zomato/Swiggy style) engineered with Vanilla JS, PHP Sessions, and PostgreSQL PDO. This project serves a complete, high-performance web experience packaged in both a **dynamic database-driven system (`index.php`)** and a **portable static prototype (`index.html`)** for testing and seamless onboarding. It also features a custom-built, interactive **PostgreSQL Database Explorer (`db-viewer.php`)** to query and view live table data right inside your web browser.
 
 ---
 
@@ -20,9 +20,9 @@ The platform has been redesigned from the ground up to follow modern web design 
 
 ## 🏗️ System Architecture & Database Schema
 
-> [!NOTE]
-> **Database Name**: The application utilizes a MySQL database named **`what_if`**. 
-> The database is automatically created on startup by the backend script inside `index.php` (if it does not already exist), along with all corresponding table structures and Bangalore food seed data.
+> [!IMPORTANT]
+> **Database Engine**: The application utilizes a **PostgreSQL** database named **`whatif_db`**. 
+> To initialize the application, you must first create the empty database (e.g. `CREATE DATABASE whatif_db;`) in PostgreSQL. When you first visit `index.php`, the system will automatically run schema migrations, create all tables, and seed them with premium Bangalore food ordering data.
 
 The database model is designed with strict data integrity, foreign keys, and cascading deletes.
 
@@ -39,70 +39,82 @@ erDiagram
     coupons ||--o{ orders : discounts
 ```
 
-### Detailed Table Specifications (`what_if` database)
+### Detailed Table Specifications (`whatif_db` database)
 
 #### 1. `users` — Account management table
-*   `id` (INT AUTO_INCREMENT, PRIMARY KEY): Unique identifier.
+*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
 *   `name` (VARCHAR(255), NOT NULL): Full name of the user.
-*   `phone` (VARCHAR(20), UNIQUE): Unique 10-digit mobile number.
+*   `phone` (VARCHAR(20), UNIQUE): Unique mobile number.
 *   `email` (VARCHAR(255), UNIQUE): Unique email address.
 *   `otp` (VARCHAR(10), DEFAULT NULL): active 6-digit session validation OTP.
-*   `otp_expires` (DATETIME, DEFAULT NULL): Expiration time bounds of the generated OTP.
-*   `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP): Account registration timestamp.
+*   `otp_expires` (TIMESTAMP, DEFAULT NULL): Expiration time bounds of the generated OTP.
+*   `created_at` (TIMESTAMP, DEFAULT NOW()): Account registration timestamp.
 
 #### 2. `restaurants` — Gourmet dining kitchens
-*   `id` (INT AUTO_INCREMENT, PRIMARY KEY): Unique identifier.
+*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
 *   `name` (VARCHAR(255), NOT NULL): Restaurant brand name.
 *   `cuisine` (VARCHAR(255), NOT NULL): Comma-separated food styles.
-*   `image` (VARCHAR(500), NOT NULL): Dining header visual thumbnail URI.
-*   `rating` (DECIMAL(3,2), DEFAULT 4.0): Cumulative user feedback rating out of `5.0`.
+*   `image` (TEXT, NOT NULL): Dining header visual thumbnail URI.
+*   `rating` (NUMERIC(2,1), DEFAULT 4.0): Cumulative user feedback rating out of `5.0`.
 *   `delivery_time` (INT, DEFAULT 30): Expected delivery duration in minutes.
 *   `min_order` (INT, DEFAULT 0): Minimum subtotal requirement for orders.
 *   `delivery_fee` (INT, DEFAULT 29): Standard delivery partner fee in INR.
-*   `is_open` (TINYINT(1), DEFAULT 1): Store kitchen availability indicator.
+*   `is_open` (BOOLEAN, DEFAULT TRUE): Store kitchen availability indicator.
 *   `offer_text` (VARCHAR(255), DEFAULT NULL): Custom deal overlay banner text.
 
 #### 3. `menu_items` — Restaurant dishes catalog
-*   `id` (INT AUTO_INCREMENT, PRIMARY KEY): Unique identifier.
-*   `restaurant_id` (INT, FK REFERENCES `restaurants` ON DELETE CASCADE): Target kitchen mapping.
+*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
+*   `restaurant_id` (BIGINT, FK REFERENCES `restaurants` ON DELETE CASCADE): Target kitchen mapping.
 *   `name` (VARCHAR(255), NOT NULL): Culinary dish name.
 *   `description` (TEXT): Ingredients and serving info.
-*   `price` (DECIMAL(10,2), NOT NULL): Item base cost.
-*   `image` (VARCHAR(500), DEFAULT NULL): Dish photography banner URI.
-*   `type` (VARCHAR(10), DEFAULT 'veg'): Categorization tag (`veg` or `nv`).
+*   `price` (INT, NOT NULL): Item base cost in INR.
+*   `image` (TEXT, DEFAULT NULL): Dish photography banner URI.
+*   `type` (VARCHAR(3), DEFAULT 'veg'): Categorization tag (`veg` or `nv`).
 *   `category` (VARCHAR(100), NOT NULL): Menu grouping section (e.g. `🔥 Bestsellers`).
-*   `is_available` (TINYINT(1), DEFAULT 1): Dish order availability toggle.
+*   `is_available` (BOOLEAN, DEFAULT TRUE): Dish order availability toggle.
 
 #### 4. `orders` — Billing checkout records
-*   `id` (INT AUTO_INCREMENT, PRIMARY KEY): Unique identifier.
-*   `user_id` (INT, FK REFERENCES `users` ON DELETE CASCADE): Customer billing identity.
-*   `restaurant_id` (INT, FK REFERENCES `restaurants` ON DELETE CASCADE): Restaurant provider.
-*   `status` (VARCHAR(50), DEFAULT 'Placed'): Order tracking state (`Placed`, `Confirmed`, `Preparing`, `Out for Delivery`, `Delivered`).
-*   `subtotal` (DECIMAL(10,2), NOT NULL): Aggregated items base total in INR.
-*   `delivery_fee` (DECIMAL(10,2), NOT NULL): Applied delivery partner surcharge.
-*   `gst` (DECIMAL(10,2), NOT NULL): Standard GST rate subtotal (5%).
-*   `discount` (DECIMAL(10,2), DEFAULT 0.00): Saved amount via coupons.
-*   `total` (DECIMAL(10,2), NOT NULL): Final payable total.
+*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
+*   `user_id` (BIGINT, FK REFERENCES `users` ON DELETE CASCADE): Customer billing identity.
+*   `restaurant_id` (BIGINT, FK REFERENCES `restaurants` ON DELETE CASCADE): Restaurant provider.
+*   `status` (VARCHAR(30), DEFAULT 'Placed'): Order tracking state (`Placed`, `Confirmed`, `Preparing`, `Out for Delivery`, `Delivered`).
+*   `subtotal` (INT, NOT NULL): Aggregated items base total in INR.
+*   `delivery_fee` (INT, NOT NULL): Applied delivery partner surcharge.
+*   `gst` (INT, NOT NULL): Standard GST rate subtotal (5%).
+*   `discount` (INT, DEFAULT 0): Saved amount via coupons.
+*   `total` (INT, NOT NULL): Final payable total.
 *   `address` (TEXT, NOT NULL): Textual delivery location path.
-*   `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP): Timestamp log.
+*   `created_at` (TIMESTAMP, DEFAULT NOW()): Timestamp log.
 
 #### 5. `order_items` — Nested transaction records
-*   `id` (INT AUTO_INCREMENT, PRIMARY KEY): Unique identifier.
-*   `order_id` (INT, FK REFERENCES `orders` ON DELETE CASCADE): Parent checkout receipt link.
-*   `item_id` (INT, DEFAULT NULL): Reference link to dish database.
-*   `name` (VARCHAR(255), NOT NULL): Purchased dish name.
-*   `price` (DECIMAL(10,2), NOT NULL): Cost per unit at checkout.
+*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
+*   `order_id` (BIGINT, FK REFERENCES `orders` ON DELETE CASCADE): Parent checkout receipt link.
+*   `item_id` (BIGINT, DEFAULT NULL): Reference link to dish database.
+*   `name` (TEXT, NOT NULL): Purchased dish name.
+*   `price` (INT, NOT NULL): Cost per unit at checkout.
 *   `qty` (INT, DEFAULT 1): Quantity purchased.
 
 #### 6. `coupons` — Promotional campaign codes
-*   `id` (INT AUTO_INCREMENT, PRIMARY KEY): Unique identifier.
-*   `code` (VARCHAR(50), UNIQUE NOT NULL): Coupon text key (e.g. `WELCOME40`).
-*   `discount_type` (VARCHAR(20), NOT NULL): Reduction type (`pct` for percentage, `flat` for INR subtraction).
-*   `discount_value` (DECIMAL(10,2), NOT NULL): Reduction value mapping.
-*   `min_order` (DECIMAL(10,2), DEFAULT 0.00): Minimum cart requirement.
+*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
+*   `code` (VARCHAR(20), UNIQUE NOT NULL): Coupon text key (e.g. `WELCOME40`).
+*   `discount_type` (VARCHAR(10), NOT NULL): Reduction type (`pct` for percentage, `flat` for INR subtraction).
+*   `discount_value` (INT, NOT NULL): Reduction value mapping.
+*   `min_order` (INT, DEFAULT 0): Minimum cart requirement.
 *   `max_uses` (INT, DEFAULT 9999): Maximum allowed globally.
 *   `used_count` (INT, DEFAULT 0): Global usage logging metrics.
-*   `expires_at` (DATETIME, DEFAULT NULL): Expiry boundary timestamp.
+*   `expires_at` (TIMESTAMP, DEFAULT NULL): Expiry boundary timestamp.
+
+---
+
+## 📊 PostgreSQL Database Explorer (`db-viewer.php`)
+
+To make exploring your database schemas and live data extremely convenient, we have included a custom developer tool called **PostgreSQL Database Explorer**:
+
+*   **No Configuration Needed**: It automatically parses your database settings directly from `index.php`.
+*   **Visual Side Panel**: Lists all 8 system tables alongside their live row counts.
+*   **Live Data Explorer**: Inspect the first 100 rows inside any table with dynamic, key-triggered data searching and real-time results.
+*   **Schema & Constraints View**: Quickly toggle to inspect column details, primary keys, schemas, and constraint configurations.
+*   **How to Access**: Launch XAMPP, start Apache, and visit: `http://localhost/what_if01/db-viewer.php`
 
 ---
 
@@ -121,9 +133,6 @@ All network calls communicate asynchronously via JSON formatted payloads.
 | `get_menu` | `GET` | `restaurant_id` | `{"🔥 Bestsellers": [{"id": 1, "name": "Classic Cheeseburger", ...}], ...}` |
 | `place_order` | `POST` | `restaurant_id`, `subtotal`, `delivery_fee`, `gst`, `discount`, `total`, `address`, `coupon_code`, `items` (JSON string) | `{"success": true, "order_id": 45, "msg": "Order placed..."}` |
 | `get_orders` | `GET` | None (requires Session `user`) | `[{"id": 45, "total": 450, "items": [{"name": "...", "qty": 1}], ...}, ...]` |
-| `validate_coupon` | `POST` | `code`, `subtotal` | `{"success": true, "discount_type": "pct", "discount_value": 40, "max": 120}` |
-| `submit_review` | `POST` | `order_id`, `rating`, `delivery_rating`, `comment` | `{"success": true}` |
-| `get_profile` | `GET` | None (requires Session `user`) | `{"success": true, "user": {...}, "addresses": [...]}` |
 
 ---
 
@@ -135,34 +144,52 @@ The static edition is completely self-contained and runs instantly without any s
 2. Sign up or log in, view the simulated OTP floating card in the bottom-right, and explore cart checkouts, visual step-progress tracking, and meal feedback.
 
 ### 2. Built-in PHP Server Method (Fastest Dynamic Startup)
-If you already have PHP and MySQL installed locally, this is the quickest method to run the dynamic version.
-1. Open a terminal/command prompt inside the `what_if01` directory.
-2. Ensure your local MySQL server is active.
+If you already have PHP and PostgreSQL installed locally, this is the quickest method to run the dynamic version.
+1. Ensure your local PostgreSQL server is active.
+2. Open a terminal/command prompt inside the `what_if01` directory.
 3. Start the lightweight built-in PHP web server:
    ```bash
    php -S localhost:8000
    ```
-4. Visit `http://localhost:8000` in your web browser. The backend will instantly connect, auto-create the database, set up tables, and seed menus.
+4. Visit `http://localhost:8000/index.php` in your web browser. The backend will instantly connect, auto-create the database schemas, and seed menus.
 
-### 3. Local Web Server Environment Method (XAMPP / WAMP)
-For a complete server administration panel experience:
+### 3. Local Web Server Environment Method (XAMPP)
+For a complete local server admin dashboard experience:
 1. Copy the `what_if01` project folder into your server's web root (e.g. `C:/xampp/htdocs/what_if01` for XAMPP).
-2. Launch the **Apache** and **MySQL** modules inside the server control panel.
-3. Open `index.php` in a text editor to verify or modify the database connection constants:
-   ```php
-   define('DB_HOST', 'localhost');
-   define('DB_PORT', '3306');
-   define('DB_NAME', 'what_if');
-   define('DB_USER', 'root');
-   define('DB_PASS', '');
-   ```
-4. Access the portal in your browser at `http://localhost/what_if01/index.php`. All database schemas are dynamically created and populated on load.
+2. **Install PostgreSQL Client Drivers in XAMPP**:
+   * Open the **XAMPP Control Panel**.
+   * Click **Config** next to **Apache** and select **PHP (php.ini)**.
+   * Search for `;extension=pdo_pgsql` and `;extension=pgsql` and remove the semicolons (`;`) at the beginning to uncomment them:
+     ```ini
+     extension=pdo_pgsql
+     extension=pgsql
+     ```
+   * Save the file.
+3. **Ensure `libpq.dll` is Loaded**:
+   * Add `C:\xampp\php` to your Windows System **PATH** environment variables, or open Apache's config (`httpd.conf`) in XAMPP and append:
+     ```apache
+     LoadFile "C:/xampp/php/libpq.dll"
+     ```
+4. **Configure Database Connection**:
+   * Open `index.php` in a text editor to update your PostgreSQL password around line 20:
+     ```php
+     define('DB_PASS', 'your_actual_password');
+     ```
+5. **Create the Database**:
+   * Open pgAdmin 4 or psql, and create your database:
+     ```sql
+     CREATE DATABASE whatif_db;
+     ```
+6. **Launch & Enjoy**:
+   * Restart Apache in the XAMPP Control Panel.
+   * Access the portal at `http://localhost/what_if01/index.php`. All tables and mock data are auto-generated on your first load!
+   * Access your data live at `http://localhost/what_if01/db-viewer.php`.
 
 ---
 
 ## 🛠️ Code Structure Sections
-Both `index.php` and `index.html` are structurally structured with clear block comments to simplify editing:
-*   `<!-- PHP BACKEND -->` — Session controls, DB migrations, seeder data, and AJAX router handlers.
-*   `<!-- STYLES -->` — Harmonic color vars, transitions, clamp sizes, skeletons, and mobile breakpoints.
-*   `<!-- HTML -->` — Layout pages, modal dialogs, WhatsApp supports, and back-to-top buttons.
-*   `<!-- SCRIPTS -->` — AJAX fetches, simulated notifications, form validation triggers, and state models.
+The project is structurally structured with clear block comments to simplify editing:
+*   `db-viewer.php` — Seamless glassmorphic developer console to view database tables and schemas dynamically.
+*   `index.php` — Core dynamic application containing session controls, database migrations, premium seeder data, and AJAX router handlers.
+*   `index.html` — Portable static prototype for rapid interface testing and client presentations.
+
