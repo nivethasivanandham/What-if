@@ -838,7 +838,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
             respond_json([]);
         }
         
-        $stmt = $pdo->prepare("SELECT o.*, r.name AS restName, r.image AS restImg FROM orders o JOIN restaurants r ON o.restaurant_id = r.id WHERE o.user_id = :user_id ORDER BY o.id DESC");
+        $stmt = $pdo->prepare("SELECT o.*, r.name AS \"restName\", r.image AS \"restImg\" FROM orders o JOIN restaurants r ON o.restaurant_id = r.id WHERE o.user_id = :user_id ORDER BY o.id DESC");
         $stmt->execute([':user_id' => $_SESSION['user']['id']]);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
