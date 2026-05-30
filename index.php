@@ -615,12 +615,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
         $params = [];
         
         if (!empty($q)) {
-            $sql .= " AND (name LIKE :q OR cuisine LIKE :q2)";
+            $sql .= " AND (name ILIKE :q OR cuisine ILIKE :q2 OR EXISTS (
+                SELECT 1 FROM menu_items m 
+                WHERE m.restaurant_id = restaurants.id 
+                  AND (m.name ILIKE :q3 OR m.description ILIKE :q4)
+            ))";
             $params[':q'] = "%$q%";
             $params[':q2'] = "%$q%";
+            $params[':q3'] = "%$q%";
+            $params[':q4'] = "%$q%";
         }
         if (!empty($cuisine)) {
-            $sql .= " AND cuisine LIKE :cuisine";
+            $sql .= " AND cuisine ILIKE :cuisine";
             $params[':cuisine'] = "%$cuisine%";
         }
         if ($rating > 0) {

@@ -107,18 +107,18 @@ function db_escape_identifier($name) {
     
     <style>
         :root {
-            --bg-dark: #070509;
-            --bg-card: rgba(18, 12, 24, 0.7);
-            --bg-sidebar: rgba(13, 8, 18, 0.9);
-            --border-neon: rgba(147, 51, 234, 0.3);
-            --border-neon-hover: rgba(147, 51, 234, 0.6);
-            --neon-accent: #a855f7;
-            --neon-green: #10b981;
-            --neon-cyan: #06b6d4;
-            --text-main: #f3e8ff;
-            --text-muted: #c084fc;
-            --text-dim: #704d9c;
-            --glass-grad: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            --bg-dark: #f8fafc; /* Very light cool grey */
+            --bg-card: #ffffff; /* Solid clean white */
+            --bg-sidebar: #f1f5f9; /* Soft light slate grey sidebar */
+            --border-neon: #e2e8f0; /* Soft border */
+            --border-neon-hover: #cbd5e1; /* Hover border */
+            --neon-accent: #2563eb; /* Royal blue brand accent */
+            --neon-green: #059669; /* Rich professional emerald green */
+            --neon-cyan: #0d9488; /* Professional dark teal */
+            --text-main: #0f172a; /* Slate 900 primary text */
+            --text-muted: #475569; /* Slate 600 secondary text */
+            --text-dim: #94a3b8; /* Slate 400 dim text */
+            --glass-grad: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 100%);
         }
 
         * {
@@ -131,8 +131,8 @@ function db_escape_identifier($name) {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: var(--bg-dark);
             background-image: 
-                radial-gradient(at 10% 20%, rgba(124, 58, 237, 0.15) 0px, transparent 50%),
-                radial-gradient(at 90% 80%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+                radial-gradient(at 10% 20%, rgba(37, 99, 235, 0.04) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(13, 148, 136, 0.04) 0px, transparent 50%);
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
@@ -142,7 +142,7 @@ function db_escape_identifier($name) {
 
         /* Header Style */
         header {
-            background: rgba(10, 6, 15, 0.85);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border-neon);
@@ -151,6 +151,7 @@ function db_escape_identifier($name) {
             justify-content: space-between;
             align-items: center;
             z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
 
         .logo-section {
@@ -164,14 +165,14 @@ function db_escape_identifier($name) {
             background: linear-gradient(135deg, var(--neon-accent), var(--neon-cyan));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.5));
+            filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.15));
         }
 
         .logo-title {
             font-weight: 800;
             font-size: 20px;
             letter-spacing: -0.5px;
-            background: linear-gradient(to right, #ffffff, #d8b4fe);
+            background: linear-gradient(to right, #0f172a, #334155);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -184,17 +185,15 @@ function db_escape_identifier($name) {
             border-radius: 50px;
             font-size: 13px;
             font-weight: 600;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background: rgba(5, 150, 105, 0.08);
+            border: 1px solid rgba(5, 150, 105, 0.2);
             color: var(--neon-green);
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
         }
 
         .connection-badge.failed {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
             color: #ef4444;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
         }
 
         /* Main Content Grid */
@@ -213,15 +212,14 @@ function db_escape_identifier($name) {
             display: flex;
             flex-direction: column;
             gap: 20px;
-            backdrop-filter: blur(10px);
         }
 
         .sidebar-title {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1.5px;
-            color: var(--text-dim);
+            color: var(--text-muted);
             margin-bottom: 8px;
         }
 
@@ -239,11 +237,12 @@ function db_escape_identifier($name) {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0, 0, 0, 0.04);
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             font-weight: 500;
             font-size: 14px;
+            color: #334155;
         }
 
         .table-item i.table-icon {
@@ -252,16 +251,17 @@ function db_escape_identifier($name) {
         }
 
         .table-item:hover {
-            background: rgba(147, 51, 234, 0.08);
-            border-color: var(--border-neon-hover);
+            background: rgba(37, 99, 235, 0.06);
+            border-color: rgba(37, 99, 235, 0.25);
+            color: var(--neon-accent);
             transform: translateX(4px);
         }
 
         .table-item.active {
-            background: linear-gradient(90deg, rgba(147, 51, 234, 0.2) 0%, rgba(6, 182, 212, 0.05) 100%);
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.1) 0%, rgba(13, 148, 136, 0.03) 100%);
             border-color: var(--neon-accent);
-            color: #ffffff;
-            box-shadow: 0 0 15px rgba(147, 51, 234, 0.15);
+            color: var(--neon-accent);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
             font-weight: 600;
         }
 
@@ -270,7 +270,7 @@ function db_escape_identifier($name) {
             font-family: 'JetBrains Mono', monospace;
             padding: 2px 6px;
             border-radius: 6px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.05);
             color: var(--text-muted);
         }
 
@@ -299,13 +299,13 @@ function db_escape_identifier($name) {
             display: flex;
             align-items: center;
             gap: 16px;
-            backdrop-filter: blur(10px);
             transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
         }
 
         .stat-card:hover {
             border-color: var(--border-neon-hover);
-            box-shadow: 0 8px 24px rgba(147, 51, 234, 0.1);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.06);
             transform: translateY(-2px);
         }
 
@@ -313,8 +313,8 @@ function db_escape_identifier($name) {
             width: 48px;
             height: 48px;
             border-radius: 12px;
-            background: rgba(147, 51, 234, 0.15);
-            border: 1px solid var(--border-neon);
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -323,8 +323,8 @@ function db_escape_identifier($name) {
         }
 
         .stat-icon.cyan {
-            background: rgba(6, 182, 212, 0.15);
-            border-color: rgba(6, 182, 212, 0.3);
+            background: rgba(13, 148, 136, 0.08);
+            border-color: rgba(13, 148, 136, 0.2);
             color: var(--neon-cyan);
         }
 
@@ -344,8 +344,8 @@ function db_escape_identifier($name) {
         .stat-value {
             font-size: 20px;
             font-weight: 700;
-            color: #ffffff;
-            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
             margin-top: 4px;
         }
 
@@ -357,8 +357,8 @@ function db_escape_identifier($name) {
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            backdrop-filter: blur(10px);
             min-height: 450px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -2px rgba(0,0,0,0.02);
         }
 
         .viewer-header {
@@ -367,7 +367,7 @@ function db_escape_identifier($name) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(255, 255, 255, 0.01);
+            background: rgba(0, 0, 0, 0.01);
         }
 
         .viewer-title {
@@ -395,10 +395,10 @@ function db_escape_identifier($name) {
         .search-input {
             width: 100%;
             padding: 10px 14px 10px 38px;
-            background: rgba(0,0,0,0.3);
+            background: #f8fafc;
             border: 1px solid var(--border-neon);
             border-radius: 10px;
-            color: #ffffff;
+            color: var(--text-main);
             font-family: inherit;
             font-size: 14px;
             outline: none;
@@ -407,14 +407,15 @@ function db_escape_identifier($name) {
 
         .search-input:focus {
             border-color: var(--neon-accent);
-            box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.12);
+            background: #ffffff;
         }
 
         /* Tabs Container */
         .viewer-tabs {
             display: flex;
             border-bottom: 1px solid var(--border-neon);
-            background: rgba(0, 0, 0, 0.15);
+            background: #f8fafc;
         }
 
         .tab-btn {
@@ -430,14 +431,14 @@ function db_escape_identifier($name) {
         }
 
         .tab-btn:hover {
-            color: #ffffff;
-            background: rgba(255,255,255,0.02);
+            color: var(--neon-accent);
+            background: rgba(37, 99, 235, 0.03);
         }
 
         .tab-btn.active {
             color: var(--neon-accent);
             border-bottom-color: var(--neon-accent);
-            background: rgba(147, 51, 234, 0.05);
+            background: #ffffff;
         }
 
         /* Data & Schema Viewer Area */
@@ -451,7 +452,7 @@ function db_escape_identifier($name) {
             width: 100%;
             overflow-x: auto;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-neon);
         }
 
         table.explorer-table {
@@ -462,10 +463,10 @@ function db_escape_identifier($name) {
         }
 
         table.explorer-table th {
-            background: rgba(15, 10, 22, 0.9);
+            background: #f8fafc;
             color: var(--text-muted);
             padding: 14px 18px;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: 0.5px;
             border-bottom: 1px solid var(--border-neon);
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -475,7 +476,7 @@ function db_escape_identifier($name) {
 
         table.explorer-table td {
             padding: 14px 18px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--border-neon);
             color: var(--text-main);
             max-width: 250px;
             overflow: hidden;
@@ -488,7 +489,7 @@ function db_escape_identifier($name) {
         }
 
         table.explorer-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.02);
+            background: #f8fafc;
         }
 
         table.explorer-table tbody tr:last-child td {
@@ -501,13 +502,14 @@ function db_escape_identifier($name) {
         }
 
         .badge-type {
-            background: rgba(6, 182, 212, 0.1);
+            background: rgba(13, 148, 136, 0.08);
             color: var(--neon-cyan);
-            border: 1px solid rgba(6, 182, 212, 0.2);
-            padding: 2px 6px;
+            border: 1px solid rgba(13, 148, 136, 0.15);
+            padding: 2px 8px;
             border-radius: 6px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 11px;
+            font-weight: 500;
         }
 
         .badge-null {
@@ -517,10 +519,10 @@ function db_escape_identifier($name) {
         }
 
         .badge-pk {
-            background: rgba(168, 85, 247, 0.1);
+            background: rgba(37, 99, 235, 0.08);
             color: var(--neon-accent);
-            border: 1px solid rgba(168, 85, 247, 0.2);
-            padding: 2px 6px;
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            padding: 2px 8px;
             border-radius: 6px;
             font-size: 10px;
             font-weight: bold;
@@ -555,8 +557,8 @@ function db_escape_identifier($name) {
 
         /* Setup Instructions Container */
         .error-card {
-            background: rgba(220, 38, 38, 0.05);
-            border: 1px solid rgba(220, 38, 38, 0.2);
+            background: #fff5f5;
+            border: 1px solid #fee2e2;
             border-radius: 16px;
             padding: 24px;
             display: flex;
@@ -576,13 +578,13 @@ function db_escape_identifier($name) {
         }
 
         .error-desc {
-            color: #fca5a5;
+            color: #b91c1c;
             font-family: 'JetBrains Mono', monospace;
             font-size: 13.5px;
-            background: rgba(0,0,0,0.4);
+            background: #fff;
             padding: 16px;
             border-radius: 10px;
-            border: 1px solid rgba(220, 38, 38, 0.15);
+            border: 1px solid #fee2e2;
             word-break: break-all;
         }
 
@@ -609,13 +611,13 @@ function db_escape_identifier($name) {
         }
 
         .code-snippet {
-            background: #000000;
+            background: #f1f5f9;
             padding: 2px 6px;
             border-radius: 4px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 12.5px;
-            color: #ffb4b4;
-            border: 1px solid rgba(255,255,255,0.05);
+            color: #b91c1c;
+            border: 1px solid var(--border-neon);
         }
 
         /* Loading Indicator */
@@ -634,7 +636,7 @@ function db_escape_identifier($name) {
         .spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid rgba(147, 51, 234, 0.1);
+            border: 4px solid rgba(37, 99, 235, 0.1);
             border-top-color: var(--neon-accent);
             border-radius: 50%;
             animation: spin 1s infinite linear;
