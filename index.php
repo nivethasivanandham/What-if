@@ -849,6 +849,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
         respond_json($orders);
     }
 
+    // 9.5. update_order_status
+    if ($action === 'update_order_status') {
+        if (!isset($_SESSION['user'])) {
+            respond_json(['success' => false, 'msg' => 'Unauthorized'], 401);
+        }
+        $orderId = isset($_POST['order_id']) ? intval($_POST['order_id']) : 0;
+        $status = isset($_POST['status']) ? trim($_POST['status']) : '';
+        
+        $allowed_statuses = ['Placed', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered', 'Cancelled'];
+        if ($orderId <= 0 || !in_array($status, $allowed_statuses)) {
+            respond_json(['success' => false, 'msg' => 'Invalid details'], 400);
+        }
+        
+        if ($pdo) {
+            $stmt = $pdo->prepare("UPDATE orders SET status = :status WHERE id = :id");
+            $stmt->execute([':status' => $status, ':id' => $orderId]);
+            respond_json(['success' => true, 'order_id' => $orderId, 'status' => $status]);
+        } else {
+            respond_json(['success' => true, 'mock' => true]);
+        }
+    }
+
     // 10. validate_coupon
     if ($action === 'validate_coupon') {
         $code = isset($_POST['code']) ? trim($_POST['code']) : '';
@@ -2840,7 +2862,12 @@ function processPayment() {
         id: data.order_id,
         restName: document.getElementById('cart-rest-label').textContent || 'Gourmet Kitchen',
         status: 'Placed',
-        orderedAt: Date.now()
+        orderedAt: Date.now(),
+        subtotal: subtotal,
+        gst: gst,
+        delivery_fee: delivery,
+        total: total,
+        items: JSON.parse(JSON.stringify(cart))
       };
     } else {
       toast(data.msg || 'Checkout failed', 'warn');
@@ -2864,7 +2891,7 @@ function trackCurrentOrder() {
   
   const o = currentTrackOrder;
   document.getElementById('track-order-id').textContent = `Order #ZMT${o.id}`;
-  document.getElementById('track-rest-name').textContent = `Preparing inside ${o.restName || 'Gourmet Kitchen'}`;
+  document.getElementById('track-rest-name').textContent = `Status: ${o.status} inside ${o.restName || 'Gourmet Kitchen'}`;
   
   // Render bill details in tracking card
   document.getElementById('track-bill').innerHTML = `
@@ -2880,6 +2907,51 @@ function trackCurrentOrder() {
 
   updateVisualTrackingProgressBar(o.status);
   showPage('track');
+
+  // Clear any existing tracking interval
+  clearInterval(trackInterval);
+
+  // Define steps
+  const steps = ['Placed', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered'];
+  
+  // Start simulation loop (every 10 seconds, advance order status in PostgreSQL!)
+  trackInterval = setInterval(() => {
+    const currentIdx = steps.indexOf(currentTrackOrder.status);
+    if (currentIdx !== -1 && currentIdx < steps.length - 1) {
+      const nextStatus = steps[currentIdx + 1];
+      
+      const formData = new FormData();
+      formData.append('order_id', currentTrackOrder.id);
+      formData.append('status', nextStatus);
+      
+      fetch('?action=update_order_status', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          currentTrackOrder.status = nextStatus;
+          document.getElementById('track-rest-name').textContent = `Status: ${nextStatus} inside ${currentTrackOrder.restName || 'Gourmet Kitchen'}`;
+          updateVisualTrackingProgressBar(nextStatus);
+          
+          let toastEmoji = '🍲';
+          if (nextStatus === 'Confirmed') toastEmoji = '✅';
+          else if (nextStatus === 'Preparing') toastEmoji = '👨‍🍳';
+          else if (nextStatus === 'Out for Delivery') toastEmoji = '🛵';
+          else if (nextStatus === 'Delivered') toastEmoji = '🎉';
+          
+          toast(`${toastEmoji} Order status updated: ${nextStatus}!`);
+          
+          if (nextStatus === 'Delivered') {
+            clearInterval(trackInterval);
+          }
+        }
+      });
+    } else {
+      clearInterval(trackInterval);
+    }
+  }, 10000);
 }
 
 // Upgrade order tracking screen visual progress bar
