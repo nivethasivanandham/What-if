@@ -769,7 +769,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
         $total = isset($_POST['total']) ? floatval($_POST['total']) : 0;
         $address = isset($_POST['address']) ? trim($_POST['address']) : '';
         $couponCode = isset($_POST['coupon_code']) ? trim($_POST['coupon_code']) : '';
-        $items = isset($_POST['items']) ? $_POST['items'] : []; // JSON decoded array
+        $items_raw = isset($_POST['items']) ? $_POST['items'] : '[]';
+        $items = json_decode($items_raw, true);
+        if (!is_array($items)) {
+            $items = [];
+        }
         
         if (empty($address) || empty($items) || $restaurantId == 0) {
             respond_json(['success' => false, 'msg' => 'Invalid order details.'], 400);
