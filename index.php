@@ -1261,6 +1261,81 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark);background:var(--bg);ove
 .modal-sub{font-size:13.5px;color:var(--faint);margin-bottom:24px;}
 .modal-close-btn{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:var(--faint);margin-top:-4px;}
 
+/* PAYMENT & CHECKOUT MODAL STYLES */
+.pay-order-summary {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 16px 20px;
+  margin: 18px 0;
+}
+.pay-order-summary h4 {
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--dark);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pos-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+  color: var(--muted);
+  padding: 6px 0;
+}
+.pos-row.total {
+  border-top: 1px dashed var(--border);
+  margin-top: 8px;
+  padding-top: 10px;
+  font-size: 15.5px;
+  font-weight: 900;
+  color: var(--dark);
+}
+.pay-methods {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+.pay-method {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  background: #fff;
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.pay-method i {
+  font-size: 18px;
+  transition: transform 0.2s;
+}
+.pay-method:hover {
+  border-color: var(--red);
+  background: var(--red-light);
+  color: var(--red);
+}
+.pay-method:hover i {
+  transform: scale(1.1);
+}
+.pay-method.on {
+  border-color: var(--red);
+  background: var(--red-light);
+  color: var(--red);
+  box-shadow: 0 0 0 2px rgba(226,55,68,0.1);
+}
+
 /* RESPONSIVE DESIGN (MOBILE FIRST) */
 @media (max-width:480px){
   .navbar{padding:0 16px;}
