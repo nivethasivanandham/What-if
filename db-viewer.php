@@ -70,7 +70,7 @@ if (isset($_GET['ajax_table']) && $pdo) {
         $columns = $schema_stmt->fetchAll();
         
         // Fetch rows (limit to 100 for safety and speed)
-        $data_stmt = $pdo->query("SELECT * FROM " . pg_escape_identifier($table) . " LIMIT 100");
+        $data_stmt = $pdo->query("SELECT * FROM " . db_escape_identifier($table) . " LIMIT 100");
         $rows = $data_stmt->fetchAll();
         
         header('Content-Type: application/json');
@@ -88,7 +88,7 @@ if (isset($_GET['ajax_table']) && $pdo) {
 }
 
 // Function to escape PG identifier
-function pg_escape_identifier($name) {
+function db_escape_identifier($name) {
     return '"' . str_replace('"', '""', $name) . '"';
 }
 ?>
@@ -696,7 +696,7 @@ function pg_escape_identifier($name) {
                             // Query count dynamically
                             $cnt = 0;
                             try {
-                                $c_stmt = $pdo->query("SELECT COUNT(*) FROM " . pg_escape_identifier($t));
+                                $c_stmt = $pdo->query("SELECT COUNT(*) FROM " . db_escape_identifier($t));
                                 $cnt = $c_stmt->fetchColumn();
                             } catch (Exception $e) {}
                             ?>
