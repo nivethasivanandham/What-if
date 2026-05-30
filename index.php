@@ -391,6 +391,35 @@ function seed_database_if_empty($pdo) {
             $ins_c->execute($c);
         }
     }
+
+    // Self-healing check for TOP PICKS foods to ensure they always exist in the database
+    $required_picks = [
+        ['rest' => 'Truffles', 'name' => 'Chicken Burger', 'desc' => 'Crispy breaded chicken patty, spicy mayo, crisp lettuce, seeded bun', 'price' => 249, 'type' => 'nv', 'category' => '🔥 Bestsellers', 'image' => 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&q=80'],
+        ['rest' => 'Vasudev Adigas', 'name' => 'Pav Bhaji', 'desc' => 'Thick vegetable curry (bhaji) served with soft butter-toasted bread rolls (pav)', 'price' => 149, 'type' => 'veg', 'category' => '🔥 Bestsellers', 'image' => 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=300&q=80'],
+        ['rest' => 'Natural Ice Cream', 'name' => 'Gulab Jamun', 'desc' => 'Two soft melt-in-the-mouth cardamon infused warm milk dumplings', 'price' => 99, 'type' => 'veg', 'category' => '🔥 Bestsellers', 'image' => 'https://images.unsplash.com/photo-1555126634-323283e090fa?w=300&q=80']
+    ];
+
+    foreach ($required_picks as $rp) {
+        $check = $pdo->prepare("SELECT COUNT(*) FROM menu_items WHERE name = :name");
+        $check->execute([':name' => $rp['name']]);
+        if ($check->fetchColumn() == 0) {
+            $r_stmt = $pdo->prepare("SELECT id FROM restaurants WHERE name = :rest");
+            $r_stmt->execute([':rest' => $rp['rest']]);
+            $r_id = $r_stmt->fetchColumn();
+            if ($r_id) {
+                $ins = $pdo->prepare("INSERT INTO menu_items (restaurant_id, name, description, price, image, type, category) VALUES (:restaurant_id, :name, :description, :price, :image, :type, :category)");
+                $ins->execute([
+                    ':restaurant_id' => $r_id,
+                    ':name' => $rp['name'],
+                    ':description' => $rp['desc'],
+                    ':price' => $rp['price'],
+                    ':image' => $rp['image'],
+                    ':type' => $rp['type'],
+                    ':category' => $rp['category']
+                ]);
+            }
+        }
+    }
 }
 
 // Exec seeding
