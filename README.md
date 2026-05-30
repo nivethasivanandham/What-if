@@ -15,6 +15,8 @@ The platform has been redesigned from the ground up to follow modern web design 
 6. **Mobile Collapsible Hamburger**: Automatically collapses navigation menus on screens `< 480px` into an animated vertical layout.
 7. **Fluid Typography & clamp()**: Fluid gaps, sizes, and padding scaling dynamically with screen widths across three responsive breakpoints (`480px`, `768px`, `1024px`).
 8. **Backdrop Closures**: Listening triggers closing modals and side-drawers automatically when clicking anywhere on overlay backdrops.
+9. **Real-time Order Progress Tracking**: Dynamically simulates order preparation and delivery in the background every 10 seconds. Advances the status automatically from `Placed` to `Delivered` in the PostgreSQL database via AJAX, complete with live color-changing visual milestones and progress bar updates.
+10. **Self-Healing Database Seeding**: Detects if critical popular items (like "Chicken Burger" or "Pav Bhaji") are missing and dynamically seeds them upon visiting `index.php`, ensuring every search query has valid matches.
 
 ---
 
@@ -114,6 +116,7 @@ To make exploring your database schemas and live data extremely convenient, we h
 *   **Visual Side Panel**: Lists all 8 system tables alongside their live row counts.
 *   **Live Data Explorer**: Inspect the first 100 rows inside any table with dynamic, key-triggered data searching and real-time results.
 *   **Schema & Constraints View**: Quickly toggle to inspect column details, primary keys, schemas, and constraint configurations.
+*   **Light Theme & Professional Corporate Palette**: Restyled with a premium light off-white layout using royal blue, emerald green, and teal highlights to make data analysis clean and strain-free.
 *   **How to Access**: Launch XAMPP, start Apache, and visit: `http://localhost/what_if01/db-viewer.php`
 
 ---
@@ -133,6 +136,7 @@ All network calls communicate asynchronously via JSON formatted payloads.
 | `get_menu` | `GET` | `restaurant_id` | `{"🔥 Bestsellers": [{"id": 1, "name": "Classic Cheeseburger", ...}], ...}` |
 | `place_order` | `POST` | `restaurant_id`, `subtotal`, `delivery_fee`, `gst`, `discount`, `total`, `address`, `coupon_code`, `items` (JSON string) | `{"success": true, "order_id": 45, "msg": "Order placed..."}` |
 | `get_orders` | `GET` | None (requires Session `user`) | `[{"id": 45, "total": 450, "items": [{"name": "...", "qty": 1}], ...}, ...]` |
+| `update_order_status` | `POST` | `order_id`, `status` | `{"success": true, "order_id": 45, "status": "Preparing"}` |
 
 ---
 
