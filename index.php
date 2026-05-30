@@ -1187,9 +1187,9 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark);background:var(--bg);ove
 .coll-cnt{color:rgba(255,255,255,.72);font-size:11.5px;margin-top:2px;}
 
 /* CART DRAWER & MODAL STYLES */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;opacity:0;pointer-events:none;transition:opacity .3s;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;opacity:0;pointer-events:none;transition:opacity .3s;}
 .overlay.on{opacity:1;pointer-events:all;}
-.cart-drawer{position:fixed;top:0;right:-420px;width:400px;height:100vh;background:#fff;z-index:900;box-shadow:var(--shadow-xl);display:flex;flex-direction:column;transition:right .35s cubic-bezier(.4,0,.2,1);}
+.cart-drawer{position:fixed;top:0;right:-420px;width:400px;height:100vh;background:#fff;z-index:1250;box-shadow:var(--shadow-xl);display:flex;flex-direction:column;transition:right .35s cubic-bezier(.4,0,.2,1);}
 .cart-drawer.on{right:0;}
 .cart-hd{padding:20px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .cart-hd-title{font-family:'Nunito',sans-serif;font-size:19px;font-weight:900;}
@@ -1253,7 +1253,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--dark);background:var(--bg);ove
 @keyframes activePulse{0%,100%{box-shadow:0 0 0 0 rgba(226,55,68,0.4);}50%{box-shadow:0 0 0 8px rgba(226,55,68,0);}}
 
 /* MENU MODAL & PAYMENT MODAL */
-.modal-wrap{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1100;opacity:0;pointer-events:none;transition:opacity .3s;display:flex;align-items:center;justify-content:center;}
+.modal-wrap{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1300;opacity:0;pointer-events:none;transition:opacity .3s;display:flex;align-items:center;justify-content:center;}
 .modal-wrap.on{opacity:1;pointer-events:all;}
 .modal-box{background:#fff;border-radius:var(--r-xl);padding:32px;width:500px;max-width:95vw;transform:scale(.9) translateY(20px);transition:.3s;max-height:90vh;overflow-y:auto;}
 .modal-wrap.on .modal-box{transform:scale(1) translateY(0);}
