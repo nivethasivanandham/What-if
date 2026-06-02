@@ -51,7 +51,7 @@ if (isset($_GET['ajax_table']) && $pdo) {
     $table = $_GET['ajax_table'];
     
     // Whitelist tables to prevent SQL injection
-    $allowed_tables = ['users', 'restaurants', 'menu_items', 'orders', 'order_items', 'coupons', 'addresses', 'reviews'];
+    $allowed_tables = ['users', 'restaurants', 'menu_items', 'orders', 'order_items', 'coupons', 'addresses', 'reviews', 'payments'];
     if (!in_array($table, $allowed_tables)) {
         header('Content-Type: application/json');
         echo json_encode(['error' => 'Invalid table requested']);
@@ -691,7 +691,7 @@ function db_escape_identifier($name) {
             <div>
                 <h3 class="sidebar-title">Explore Tables</h3>
                 <?php if ($pdo): 
-                    $tables = ['users', 'restaurants', 'menu_items', 'orders', 'order_items', 'coupons', 'addresses', 'reviews'];
+                    $tables = ['users', 'restaurants', 'menu_items', 'orders', 'order_items', 'coupons', 'addresses', 'reviews', 'payments'];
                     ?>
                     <ul class="table-list">
                         <?php foreach ($tables as $t): 

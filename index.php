@@ -252,8 +252,22 @@ if ($pdo) {
         item_id BIGINT,
         name TEXT NOT NULL,
         price INT NOT NULL,
-        qty INT NOT NULL DEFAULT 1
+        qty INT NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT NOW(),
+        user_name VARCHAR(255),
+        user_phone VARCHAR(50),
+        user_email VARCHAR(255)
     )");
+
+    // Self-healing migrations for order_items if it already exists
+    try {
+        $pdo->exec("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()");
+        $pdo->exec("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS user_name VARCHAR(255)");
+        $pdo->exec("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS user_phone VARCHAR(50)");
+        $pdo->exec("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS user_email VARCHAR(255)");
+    } catch (Exception $e) {
+        // Silently skip if DB drivers or other issues block ALTER IF NOT EXISTS
+    }
 
     // 6. Coupons Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS coupons (
@@ -286,6 +300,17 @@ if ($pdo) {
         rating INT NOT NULL,
         delivery_rating INT NOT NULL,
         comment TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+    )");
+
+    // 9. Payments Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS payments (
+        id BIGSERIAL PRIMARY KEY,
+        order_id BIGINT REFERENCES orders(id) ON DELETE CASCADE,
+        payment_method VARCHAR(50) NOT NULL,
+        payment_status VARCHAR(50) NOT NULL DEFAULT 'Completed',
+        amount INT NOT NULL,
+        transaction_id VARCHAR(100) NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
     )");
 }
@@ -803,20 +828,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
                 ]);
                 $orderId = $ins_o->fetchColumn();
                 
-                // Insert items
-                $ins_i = $pdo->prepare("INSERT INTO order_items (order_id, item_id, name, price, qty) VALUES (:order_id, :item_id, :name, :price, :qty)");
+                // Insert payment details
+                $paymentMethod = isset($_POST['payment_method']) ? trim($_POST['payment_method']) : 'upi';
+                $paymentStatus = (strtolower($paymentMethod) === 'cod') ? 'COD Pending' : 'Completed';
+                $transactionId = 'TXN-' . strtoupper(uniqid()) . mt_rand(100, 999);
+                
+                $ins_p = $pdo->prepare("INSERT INTO payments (order_id, payment_method, payment_status, amount, transaction_id) VALUES (:order_id, :payment_method, :payment_status, :amount, :transaction_id)");
+                $ins_p->execute([
+                    ':order_id' => $orderId,
+                    ':payment_method' => $paymentMethod,
+                    ':payment_status' => $paymentStatus,
+                    ':amount' => $total,
+                    ':transaction_id' => $transactionId
+                ]);
+
+                // Insert items with time and user name details
+                $ins_i = $pdo->prepare("INSERT INTO order_items (order_id, item_id, name, price, qty, user_name, user_phone, user_email) VALUES (:order_id, :item_id, :name, :price, :qty, :user_name, :user_phone, :user_email)");
                 foreach ($items as $item) {
                     $ins_i->execute([
                         ':order_id' => $orderId,
                         ':item_id' => isset($item['id']) ? intval($item['id']) : null,
                         ':name' => $item['name'],
                         ':price' => floatval($item['price']),
-                        ':qty' => intval($item['qty'])
+                        ':qty' => intval($item['qty']),
+                        ':user_name' => $_SESSION['user']['name'],
+                        ':user_phone' => $_SESSION['user']['phone'],
+                        ':user_email' => $_SESSION['user']['email']
                     ]);
                 }
                 
                 $pdo->commit();
-                respond_json(['success' => true, 'order_id' => $orderId, 'msg' => 'Order placed successfully!']);
+                respond_json([
+                    'success' => true, 
+                    'order_id' => $orderId, 
+                    'payment_method' => $paymentMethod, 
+                    'transaction_id' => $transactionId, 
+                    'msg' => 'Order placed and payment recorded successfully!'
+                ]);
             } catch (Exception $e) {
                 $pdo->rollBack();
                 respond_json(['success' => false, 'msg' => 'Failed to place order: ' . $e->getMessage()], 500);
@@ -838,12 +886,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
             respond_json([]);
         }
         
-        $stmt = $pdo->prepare("SELECT o.*, r.name AS \"restName\", r.image AS \"restImg\" FROM orders o JOIN restaurants r ON o.restaurant_id = r.id WHERE o.user_id = :user_id ORDER BY o.id DESC");
+        $stmt = $pdo->prepare("SELECT o.*, r.name AS \"restName\", r.image AS \"restImg\", p.payment_method, p.payment_status, p.transaction_id FROM orders o JOIN restaurants r ON o.restaurant_id = r.id LEFT JOIN payments p ON o.id = p.order_id WHERE o.user_id = :user_id ORDER BY o.id DESC");
         $stmt->execute([':user_id' => $_SESSION['user']['id']]);
         $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Fetch items for each order
-        $stmt_i = $pdo->prepare("SELECT name, price, qty FROM order_items WHERE order_id = :order_id");
+        // Fetch items for each order including time and user name
+        $stmt_i = $pdo->prepare("SELECT name, price, qty, created_at, user_name, user_phone, user_email FROM order_items WHERE order_id = :order_id ORDER BY id ASC");
         
         foreach ($orders as &$order) {
             $stmt_i->execute([':order_id' => $order['id']]);
@@ -2918,6 +2966,7 @@ function processPayment() {
   formData.append('address', addrInput.value.trim());
   formData.append('coupon_code', couponApplied || '');
   formData.append('items', JSON.stringify(cart));
+  formData.append('payment_method', payMethod);
 
   fetch('?action=place_order', {
     method: 'POST',
@@ -2930,13 +2979,8 @@ function processPayment() {
     
     if (data.success) {
       closePay();
-      cart = []; cartRest = null; couponApplied = null; couponSaving = 0;
-      updateCartUI();
       
-      document.getElementById('success-order-id').textContent = `Order #ZMT${data.order_id}`;
-      document.getElementById('order-success').classList.add('on');
-      
-      // Seed order history locally so we can track immediately
+      // Seed order history locally so we can track immediately with rich payment details
       currentTrackOrder = {
         id: data.order_id,
         restName: document.getElementById('cart-rest-label').textContent || 'Gourmet Kitchen',
@@ -2946,8 +2990,21 @@ function processPayment() {
         gst: gst,
         delivery_fee: delivery,
         total: total,
-        items: JSON.parse(JSON.stringify(cart))
+        payment_method: data.payment_method || payMethod,
+        payment_status: data.payment_status || (payMethod === 'cod' ? 'COD Pending' : 'Completed'),
+        transaction_id: data.transaction_id || ('TXN-MOCK-' + Date.now()),
+        items: JSON.parse(JSON.stringify(cart)).map(item => ({
+          ...item,
+          user_name: currentUser ? currentUser.name : 'Aakash Sharma',
+          created_at: new Date().toLocaleString()
+        }))
       };
+
+      cart = []; cartRest = null; couponApplied = null; couponSaving = 0;
+      updateCartUI();
+      
+      document.getElementById('success-order-id').textContent = `Order #ZMT${data.order_id}`;
+      document.getElementById('order-success').classList.add('on');
     } else {
       toast(data.msg || 'Checkout failed', 'warn');
     }
@@ -2972,16 +3029,51 @@ function trackCurrentOrder() {
   document.getElementById('track-order-id').textContent = `Order #ZMT${o.id}`;
   document.getElementById('track-rest-name').textContent = `Status: ${o.status} inside ${o.restName || 'Gourmet Kitchen'}`;
   
-  // Render bill details in tracking card
+  // Render bill details in tracking card with payment details
+  let paymentHtml = '';
+  if (o.payment_method) {
+    const pStatusClass = (o.payment_status === 'Completed' || o.payment_status === 'Success') ? 'color:var(--green)' : 'color:var(--orange)';
+    paymentHtml = `
+      <div class="to-bill-row" style="border-top:1px dashed var(--border);padding-top:10px;margin-top:10px;">
+        <span>Payment Method</span>
+        <span style="font-weight:700;color:var(--dark);text-transform:uppercase;">${o.payment_method}</span>
+      </div>
+      <div class="to-bill-row">
+        <span>Transaction ID</span>
+        <code style="font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:11.5px;">${o.transaction_id}</code>
+      </div>
+      <div class="to-bill-row" style="margin-bottom:10px;">
+        <span>Payment Status</span>
+        <span style="${pStatusClass};font-weight:700;">${o.payment_status}</span>
+      </div>
+    `;
+  }
+
   document.getElementById('track-bill').innerHTML = `
     <div class="to-bill-row"><span>Subtotal</span><span>₹${parseInt(o.subtotal)}</span></div>
     <div class="to-bill-row"><span>GST charges</span><span>₹${parseInt(o.gst)}</span></div>
     <div class="to-bill-row"><span>Delivery</span><span>${parseInt(o.delivery_fee) === 0 ? 'FREE' : '₹' + parseInt(o.delivery_fee)}</span></div>
-    <div class="to-bill-row tot"><span>Grand Total</span><span>₹${parseInt(o.total)}</span></div>`;
+    <div class="to-bill-row tot"><span>Grand Total</span><span>₹${parseInt(o.total)}</span></div>
+    ${paymentHtml}`;
     
   if (o.items) {
-    document.getElementById('track-order-items').innerHTML = o.items.map(i => `
-      <div class="to-item"><span>${i.name} ×${i.qty}</span><span>₹${parseInt(i.price) * i.qty}</span></div>`).join('');
+    document.getElementById('track-order-items').innerHTML = o.items.map(i => {
+      const itemTime = i.created_at ? (i.created_at.includes('T') ? new Date(i.created_at).toLocaleString() : i.created_at) : (o.created_at || 'Just now');
+      return `
+      <div class="to-item" style="flex-direction:column;align-items:flex-start;gap:4px;padding:10px 0;">
+        <div style="display:flex;justify-content:space-between;width:100%;font-size:13.5px;">
+          <span style="font-weight:700;">${i.name} ×${i.qty}</span>
+          <span>₹${parseInt(i.price) * i.qty}</span>
+        </div>
+        ${i.user_name ? `
+          <div style="font-size:11px;color:var(--faint);display:flex;align-items:center;gap:6px;">
+            <span><i class="fas fa-user"></i> ${i.user_name}</span>
+            <span>·</span>
+            <span><i class="fas fa-clock"></i> ${itemTime}</span>
+          </div>
+        ` : ''}
+      </div>`;
+    }).join('');
   }
 
   updateVisualTrackingProgressBar(o.status);
@@ -3430,26 +3522,55 @@ function renderOrdersList() {
     return;
   }
 
-  el.innerHTML = orders.map(o => `
-    <div class="order-card">
-      <div class="order-card-hd">
-        <img class="order-rest-img" src="${o.restImg}" alt="">
-        <div>
-          <div class="order-rest-name">${o.restName}</div>
-          <div class="order-date">${o.created_at} · ${o.items.length} dishes</div>
+  el.innerHTML = orders.map(o => {
+    const paymentBlock = o.payment_method ? `
+      <div style="font-size:12px;color:var(--muted);padding:10px 14px;background:var(--bg-soft);border-radius:10px;border:1px solid var(--border);margin-top:12px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;">
+        <span><i class="fas fa-credit-card" style="color:var(--red);margin-right:4px;"></i> Payment: <strong style="color:var(--dark);text-transform:uppercase;">${o.payment_method}</strong></span>
+        <span>Txn ID: <code style="font-family:monospace;background:#fff;padding:2px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;">${o.transaction_id}</code></span>
+        <span style="font-weight:700;color:${(o.payment_status === 'Completed' || o.payment_status === 'Success') ? 'var(--green)' : 'var(--orange)'}"><i class="fas fa-check-circle"></i> ${o.payment_status}</span>
+      </div>
+    ` : '';
+
+    const itemsBlock = o.items.map(i => {
+      const itemTime = i.created_at ? (i.created_at.includes('T') ? new Date(i.created_at).toLocaleString() : i.created_at) : (o.created_at || 'Just now');
+      return `
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;border-bottom:1px dashed #f3f4f6;">
+          <span style="font-weight:600;color:var(--dark);">${i.name} <span style="color:var(--red);">×${i.qty}</span></span>
+          ${i.user_name ? `
+            <span style="font-size:11px;color:var(--faint);background:#f8fafc;padding:3px 8px;border-radius:4px;border:1.5px solid #f1f5f9;display:flex;align-items:center;gap:4px;">
+              <i class="fas fa-user" style="font-size:9px;"></i> ${i.user_name} 
+              <span style="color:#cbd5e1;">|</span>
+              <i class="fas fa-clock" style="font-size:9px;"></i> ${itemTime}
+            </span>
+          ` : ''}
         </div>
-        <div class="order-status ${o.status === 'Delivered' ? 'status-delivered' : 'status-active'}">${o.status}</div>
-      </div>
-      <div class="order-items-row">${o.items.map(i => `${i.name} ×${i.qty}`).join(', ')}</div>
-      <div class="order-actions">
-        ${o.status === 'Delivered' ? `
-          <button class="order-action-btn oab-outline" onclick="reorderOrder(${o.id})"><i class="fas fa-redo"></i> Reorder</button>
-          <button class="order-action-btn oab-red" onclick="openFeedback(${o.id})"><i class="fas fa-star"></i> Rate Meal</button>
-        ` : `
-          <button class="order-action-btn oab-outline" onclick="trackOrder(${o.id})"><i class="fas fa-map-marker-alt"></i> Track Live</button>
-        `}
-      </div>
-    </div>`).join('');
+      `;
+    }).join('');
+
+    return `
+      <div class="order-card" style="padding:20px;border-radius:18px;border:1px solid var(--border);box-shadow:var(--shadow-xs);margin-bottom:20px;background:#fff;">
+        <div class="order-card-hd" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px;">
+          <img class="order-rest-img" src="${o.restImg}" alt="" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">
+          <div style="flex:1;">
+            <div class="order-rest-name" style="font-size:16px;font-weight:800;color:var(--dark);">${o.restName}</div>
+            <div class="order-date" style="font-size:12px;color:var(--faint);margin-top:2px;">${o.created_at} · ₹${parseInt(o.total)} total</div>
+          </div>
+          <div class="order-status ${o.status === 'Delivered' ? 'status-delivered' : 'status-active'}" style="font-size:12px;font-weight:800;padding:4px 10px;border-radius:6px;">${o.status}</div>
+        </div>
+        <div class="order-items-container" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
+          ${itemsBlock}
+        </div>
+        ${paymentBlock}
+        <div class="order-actions" style="margin-top:14px;display:flex;gap:8px;">
+          ${o.status === 'Delivered' ? `
+            <button class="order-action-btn oab-outline" onclick="reorderOrder(${o.id})" style="flex:1;padding:10px;font-size:13px;height:38px;"><i class="fas fa-redo"></i> Reorder</button>
+            <button class="order-action-btn oab-red" onclick="openFeedback(${o.id})" style="flex:1;padding:10px;font-size:13px;height:38px;"><i class="fas fa-star"></i> Rate Meal</button>
+          ` : `
+            <button class="order-action-btn oab-outline" onclick="trackOrder(${o.id})" style="flex:1;padding:10px;font-size:13px;height:38px;"><i class="fas fa-map-marker-alt"></i> Track Live</button>
+          `}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 function reorderOrder(id) {
