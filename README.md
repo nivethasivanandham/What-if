@@ -1,199 +1,288 @@
-# What If — Discover The Best Food & Drinks 🍕
+# What If — Premium Food Ordering Platform 🍕
 
-Welcome to the **"What If"** food delivery platform (Zomato/Swiggy style) engineered with Vanilla JS, PHP Sessions, and PostgreSQL PDO. This project serves a complete, high-performance web experience packaged in both a **dynamic database-driven system (`index.php`)** and a **portable static prototype (`index.html`)** for testing and seamless onboarding. It also features a custom-built, interactive **PostgreSQL Database Explorer (`db-viewer.php`)** to query and view live table data right inside your web browser.
-
----
-
-## 🎨 Premium Visual Elements Included
-The platform has been redesigned from the ground up to follow modern web design principles (Nunito + DM Sans typography, HSL tailored vibrant color tones, and micro-interactions):
-
-1. **Skeleton Pulse Screens**: Renders gray-gradient pulse states during search results and menu query resolutions.
-2. **Back to Top Button**: Scans scrolls, fading in past `400px` to smooth-scroll users back to `0,0` viewport coordinates.
-3. **WhatsApp Floating Support**: Floating green badge at bottom-left linking users to instant simulated customer care.
-4. **Visual Order Progress Steps**: Active state indicators showing checkout stages (`Placed → Confirmed → Preparing → Out for Delivery → Delivered`) with pulse glow keyframes.
-5. **Smooth Page Transitions**: Fades pages in and out during route switching to minimize cognitive load.
-6. **Mobile Collapsible Hamburger**: Automatically collapses navigation menus on screens `< 480px` into an animated vertical layout.
-7. **Fluid Typography & clamp()**: Fluid gaps, sizes, and padding scaling dynamically with screen widths across three responsive breakpoints (`480px`, `768px`, `1024px`).
-8. **Backdrop Closures**: Listening triggers closing modals and side-drawers automatically when clicking anywhere on overlay backdrops.
-9. **Real-time Order Progress Tracking**: Dynamically simulates order preparation and delivery in the background every 10 seconds. Advances the status automatically from `Placed` to `Delivered` in the PostgreSQL database via AJAX, complete with live color-changing visual milestones and progress bar updates.
-10. **Self-Healing Database Seeding**: Detects if critical popular items (like "Chicken Burger" or "Pav Bhaji") are missing and dynamically seeds them upon visiting `index.php`, ensuring every search query has valid matches.
+> A production-grade, Zomato-style food delivery platform built with **PHP**, **PostgreSQL**, and **Vanilla JS**. Features a multi-role system (Customer, Restaurant Owner, Admin), a customer support ticket engine, a live analytics dashboard, and CSV data exports — all integrated into a single, self-bootstrapping codebase.
 
 ---
 
-## 🏗️ System Architecture & Database Schema
+## ✨ Key Features
 
-> [!IMPORTANT]
-> **Database Engine**: The application utilizes a **PostgreSQL** database named **`whatif_db`**. 
-> To initialize the application, you must first create the empty database (e.g. `CREATE DATABASE whatif_db;`) in PostgreSQL. When you first visit `index.php`, the system will automatically run schema migrations, create all tables, and seed them with premium Bangalore food ordering data.
+### 🛍️ Customer Experience
+- OTP-based login (phone & email) with auto-account creation
+- Restaurant discovery with live search, cuisine filters, and sorting
+- Interactive cart drawer with coupon validation
+- UPI / Card / COD checkout with real payment recording in PostgreSQL
+- Live order tracking with animated progress bar (`Placed → Delivered`)
+- Order history with reorder and feedback/rating system
+- **Support Center** — create & track support tickets, reply to admin responses
 
-The database model is designed with strict data integrity, foreign keys, and cascading deletes.
+### 👨‍💼 Admin Panel
+- **Support Tickets Dashboard** — search, filter, reply, and update status
+- **Reports & Analytics** — 8 live KPI counters + 6 Chart.js visualizations
+- **CSV Exports** — Orders, Customers, Restaurants, Menus, Deliveries (with filters)
+- All exports are logged to an audit trail (`export_logs` table)
+
+### 🎨 Premium UI/UX
+- Glassmorphic dark admin dashboard with Chart.js charts
+- Skeleton pulse loading screens during AJAX data fetches
+- Smooth page transitions with fade + translateY animations
+- Mobile hamburger collapsible navbar with fluid typography (`clamp()`)
+- Real-time order status simulation (advances every 10 seconds via AJAX)
+- Self-healing DB seeder — always ensures critical demo data exists
+
+---
+
+## 🏗️ System Architecture
+
+```
+what_if01/
+├── index.php                          ← Core SPA (DB init, AJAX router, full frontend UI)
+├── dev-db-inspector.php               ← Developer-only PostgreSQL browser tool
+├── README.md
+│
+├── includes/
+│   ├── support-functions.php          ← DB migrations, role auth guards, CSRF, sanitize
+│   ├── export-functions.php           ← CSV streaming, export audit logging
+│   ├── mailer.php                     ← PHPMailer SMTP + HTML file fallback logger
+│   └── PHPMailer/                     ← PHPMailer v6 library (Exception, PHPMailer, SMTP)
+│
+├── customer/
+│   └── support/
+│       ├── create-ticket.php          ← Submit a new support ticket
+│       ├── my-tickets.php             ← List all personal tickets
+│       └── ticket-details.php         ← View thread & reply
+│
+└── admin/
+    ├── support/
+    │   ├── tickets.php                ← Admin ticket list (search, filter, bulk update)
+    │   └── ticket-details.php         ← Thread view, admin reply, status management
+    └── reports/
+        ├── index.php                  ← Analytics dashboard (Chart.js)
+        ├── export-orders.php          ← Filtered orders CSV download
+        ├── export-customers.php       ← Customer directory CSV download
+        ├── export-restaurants.php     ← Restaurants ledger CSV download
+        ├── export-menu.php            ← Menu catalog CSV download
+        └── export-deliveries.php      ← Delivery audit CSV download
+```
+
+---
+
+## 🗄️ Database Schema (`whatif_db`)
+
+All tables are **auto-created** and **self-healed** on first load of `index.php`. No manual SQL setup required beyond creating the empty database.
 
 ```mermaid
 erDiagram
     users ||--o{ orders : places
     users ||--o{ reviews : writes
     users ||--o{ addresses : owns
+    users ||--o{ support_tickets : opens
     restaurants ||--o{ menu_items : has
     restaurants ||--o{ orders : receives
     restaurants ||--o{ reviews : gets
     orders ||--|{ order_items : contains
+    orders ||--o| payments : records
+    orders ||--o| deliveries : dispatches
     orders ||--o| reviews : rates
+    support_tickets ||--o{ support_replies : threads
     coupons ||--o{ orders : discounts
+    users ||--o{ export_logs : triggers
 ```
 
-### Detailed Table Specifications (`whatif_db` database)
+### Core Tables
 
-#### 1. `users` — Account management table
-*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
-*   `name` (VARCHAR(255), NOT NULL): Full name of the user.
-*   `phone` (VARCHAR(20), UNIQUE): Unique mobile number.
-*   `email` (VARCHAR(255), UNIQUE): Unique email address.
-*   `otp` (VARCHAR(10), DEFAULT NULL): active 6-digit session validation OTP.
-*   `otp_expires` (TIMESTAMP, DEFAULT NULL): Expiration time bounds of the generated OTP.
-*   `created_at` (TIMESTAMP, DEFAULT NOW()): Account registration timestamp.
+| Table | Purpose |
+|---|---|
+| `users` | Accounts with `role` (Customer / Restaurant Owner / Admin) |
+| `restaurants` | Dining kitchens with `owner_id` foreign key |
+| `menu_items` | Food catalog with category, type (veg/nv), and availability |
+| `orders` | Full checkout records with status lifecycle |
+| `order_items` | Line items per order with user snapshot (name, phone, email) |
+| `payments` | Transaction log (UPI / Card / COD), payment status, transaction ID |
+| `deliveries` | Delivery partner assignment and completion timestamps |
+| `coupons` | Promo codes with `pct`/`flat` discount types and usage caps |
+| `addresses` | Saved delivery locations per user |
+| `reviews` | Food + delivery ratings linked to orders |
+| `support_tickets` | Customer support threads (category, priority, status) |
+| `support_replies` | Threaded replies from customers and admins |
+| `export_logs` | Admin CSV export audit trail (who, what, when, from which IP) |
 
-#### 2. `restaurants` — Gourmet dining kitchens
-*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
-*   `name` (VARCHAR(255), NOT NULL): Restaurant brand name.
-*   `cuisine` (VARCHAR(255), NOT NULL): Comma-separated food styles.
-*   `image` (TEXT, NOT NULL): Dining header visual thumbnail URI.
-*   `rating` (NUMERIC(2,1), DEFAULT 4.0): Cumulative user feedback rating out of `5.0`.
-*   `delivery_time` (INT, DEFAULT 30): Expected delivery duration in minutes.
-*   `min_order` (INT, DEFAULT 0): Minimum subtotal requirement for orders.
-*   `delivery_fee` (INT, DEFAULT 29): Standard delivery partner fee in INR.
-*   `is_open` (BOOLEAN, DEFAULT TRUE): Store kitchen availability indicator.
-*   `offer_text` (VARCHAR(255), DEFAULT NULL): Custom deal overlay banner text.
+### `users` Table (Extended Schema)
+| Column | Type | Notes |
+|---|---|---|
+| `id` | BIGSERIAL PK | Auto-increment |
+| `name` | VARCHAR(255) | Full name |
+| `phone` | VARCHAR(20) UNIQUE | Mobile number |
+| `email` | VARCHAR(255) UNIQUE | Email address |
+| `role` | VARCHAR(20) | `Customer` / `Restaurant Owner` / `Admin` |
+| `otp` | VARCHAR(10) | Active 6-digit OTP (nulled after verify) |
+| `otp_expires` | TIMESTAMP | OTP validity window (5 minutes) |
+| `address` | TEXT | Default delivery address |
+| `created_at` | TIMESTAMP | Registration timestamp |
 
-#### 3. `menu_items` — Restaurant dishes catalog
-*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
-*   `restaurant_id` (BIGINT, FK REFERENCES `restaurants` ON DELETE CASCADE): Target kitchen mapping.
-*   `name` (VARCHAR(255), NOT NULL): Culinary dish name.
-*   `description` (TEXT): Ingredients and serving info.
-*   `price` (INT, NOT NULL): Item base cost in INR.
-*   `image` (TEXT, DEFAULT NULL): Dish photography banner URI.
-*   `type` (VARCHAR(3), DEFAULT 'veg'): Categorization tag (`veg` or `nv`).
-*   `category` (VARCHAR(100), NOT NULL): Menu grouping section (e.g. `🔥 Bestsellers`).
-*   `is_available` (BOOLEAN, DEFAULT TRUE): Dish order availability toggle.
-
-#### 4. `orders` — Billing checkout records
-*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
-*   `user_id` (BIGINT, FK REFERENCES `users` ON DELETE CASCADE): Customer billing identity.
-*   `restaurant_id` (BIGINT, FK REFERENCES `restaurants` ON DELETE CASCADE): Restaurant provider.
-*   `status` (VARCHAR(30), DEFAULT 'Placed'): Order tracking state (`Placed`, `Confirmed`, `Preparing`, `Out for Delivery`, `Delivered`).
-*   `subtotal` (INT, NOT NULL): Aggregated items base total in INR.
-*   `delivery_fee` (INT, NOT NULL): Applied delivery partner surcharge.
-*   `gst` (INT, NOT NULL): Standard GST rate subtotal (5%).
-*   `discount` (INT, DEFAULT 0): Saved amount via coupons.
-*   `total` (INT, NOT NULL): Final payable total.
-*   `address` (TEXT, NOT NULL): Textual delivery location path.
-*   `created_at` (TIMESTAMP, DEFAULT NOW()): Timestamp log.
-
-#### 5. `order_items` — Nested transaction records
-*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
-*   `order_id` (BIGINT, FK REFERENCES `orders` ON DELETE CASCADE): Parent checkout receipt link.
-*   `item_id` (BIGINT, DEFAULT NULL): Reference link to dish database.
-*   `name` (TEXT, NOT NULL): Purchased dish name.
-*   `price` (INT, NOT NULL): Cost per unit at checkout.
-*   `qty` (INT, DEFAULT 1): Quantity purchased.
-
-#### 6. `coupons` — Promotional campaign codes
-*   `id` (BIGSERIAL, PRIMARY KEY): Unique auto-incrementing identifier.
-*   `code` (VARCHAR(20), UNIQUE NOT NULL): Coupon text key (e.g. `WELCOME40`).
-*   `discount_type` (VARCHAR(10), NOT NULL): Reduction type (`pct` for percentage, `flat` for INR subtraction).
-*   `discount_value` (INT, NOT NULL): Reduction value mapping.
-*   `min_order` (INT, DEFAULT 0): Minimum cart requirement.
-*   `max_uses` (INT, DEFAULT 9999): Maximum allowed globally.
-*   `used_count` (INT, DEFAULT 0): Global usage logging metrics.
-*   `expires_at` (TIMESTAMP, DEFAULT NULL): Expiry boundary timestamp.
+### `support_tickets` Table
+| Column | Type | Notes |
+|---|---|---|
+| `id` | SERIAL PK | Auto-increment |
+| `customer_id` | INT FK → users | Ticket owner |
+| `order_id` | INT FK → orders | Optional related order |
+| `subject` | VARCHAR(255) | Short title |
+| `category` | VARCHAR(100) | Order Issue / Payment Issue / Refund Request / Restaurant Complaint / Delivery Problem / Account Issue / Other |
+| `priority` | VARCHAR(20) | `Low` / `Medium` / `High` |
+| `message` | TEXT | Initial description |
+| `status` | VARCHAR(30) | `Open` / `In Progress` / `Resolved` / `Closed` |
+| `created_at` | TIMESTAMP | Submitted timestamp |
+| `updated_at` | TIMESTAMP | Last modified timestamp |
 
 ---
 
-## 📊 PostgreSQL Database Explorer (`db-viewer.php`)
+## 🔑 Demo Login Credentials
 
-To make exploring your database schemas and live data extremely convenient, we have included a custom developer tool called **PostgreSQL Database Explorer**:
+The following accounts are **auto-seeded** into the database on first run:
 
-*   **No Configuration Needed**: It automatically parses your database settings directly from `index.php`.
-*   **Visual Side Panel**: Lists all 8 system tables alongside their live row counts.
-*   **Live Data Explorer**: Inspect the first 100 rows inside any table with dynamic, key-triggered data searching and real-time results.
-*   **Schema & Constraints View**: Quickly toggle to inspect column details, primary keys, schemas, and constraint configurations.
-*   **Light Theme & Professional Corporate Palette**: Restyled with a premium light off-white layout using royal blue, emerald green, and teal highlights to make data analysis clean and strain-free.
-*   **How to Access**: Launch XAMPP, start Apache, and visit: `http://localhost/what_if01/db-viewer.php`
+| Role | Email | Phone | OTP |
+|---|---|---|---|
+| **Admin** | `admin@whatif.com` | `9999999999` | Shown in popup after requesting OTP |
+| **Restaurant Owner** | `owner@whatif.com` | `8888888888` | Shown in popup after requesting OTP |
+| **Customer** | Any new email/phone | Any new phone | Auto-creates account, OTP shown in popup |
+
+> The OTP simulator popup appears in the bottom-right of the screen after clicking **Send OTP** — no real SMS/email delivery needed.
 
 ---
 
-## 🔌 API Endpoints Catalog (`index.php?action=...`)
+## 🔌 API Endpoints (`index.php?action=...`)
 
-All network calls communicate asynchronously via JSON formatted payloads.
+All calls communicate asynchronously via JSON.
 
-| Action Endpoint | HTTP Method | Expected Inputs | Success Response Structure |
-| :--- | :--- | :--- | :--- |
-| `login_send_otp` | `POST` | `phone` (optional), `email` (optional) | `{"success": true, "otp": "6-digit-otp", "msg": "OTP generated..."}` |
-| `login` | `POST` | `phone`/`email`, `otp` | `{"success": true, "user": {"id": 1, "name": "..."}}` |
-| `register_send_otp`| `POST` | `name`, `email`, `phone`, `password` | `{"success": true, "otp": "6-digit-otp"}` |
-| `register` | `POST` | `otp` | `{"success": true, "user": {"id": 1, "name": "..."}}` |
-| `logout` | `POST` | None | `{"success": true}` |
-| `get_restaurants` | `GET` | `q` (search key), `cuisine`, `rating`, `sort`| `[{"id": 1, "name": "Truffles", "cuisine": "..."}, ...]` |
-| `get_menu` | `GET` | `restaurant_id` | `{"🔥 Bestsellers": [{"id": 1, "name": "Classic Cheeseburger", ...}], ...}` |
-| `place_order` | `POST` | `restaurant_id`, `subtotal`, `delivery_fee`, `gst`, `discount`, `total`, `address`, `coupon_code`, `items` (JSON string) | `{"success": true, "order_id": 45, "msg": "Order placed..."}` |
-| `get_orders` | `GET` | None (requires Session `user`) | `[{"id": 45, "total": 450, "items": [{"name": "...", "qty": 1}], ...}, ...]` |
-| `update_order_status` | `POST` | `order_id`, `status` | `{"success": true, "order_id": 45, "status": "Preparing"}` |
+| Endpoint | Method | Inputs | Response |
+|---|---|---|---|
+| `login_send_otp` | POST | `phone` or `email` | `{"success": true, "otp": "123456"}` |
+| `login` | POST | `phone`/`email`, `otp` | `{"success": true, "user": {...}}` |
+| `register_send_otp` | POST | `name`, `email`, `phone` | `{"success": true, "otp": "123456"}` |
+| `register` | POST | `otp` | `{"success": true, "user": {...}}` |
+| `logout` | GET | — | `{"success": true}` |
+| `get_restaurants` | GET | `q`, `cuisine`, `rating`, `sort` | `[{restaurant}, ...]` |
+| `get_menu` | GET | `restaurant_id` | `{"Category": [{item}, ...], ...}` |
+| `place_order` | POST | `restaurant_id`, `subtotal`, `gst`, `delivery_fee`, `discount`, `total`, `address`, `coupon_code`, `items` (JSON), `payment_method` | `{"success": true, "order_id": 45, "transaction_id": "TXN-..."}` |
+| `get_orders` | GET | *(session required)* | `[{order + items + payment}, ...]` |
+| `update_order_status` | POST | `order_id`, `status` | `{"success": true, "status": "Preparing"}` |
+| `validate_coupon` | POST | `code`, `subtotal` | `{"success": true, "discount_type": "pct", "discount_value": 40}` |
+| `submit_review` | POST | `order_id`, `rating`, `delivery_rating`, `comment` | `{"success": true}` |
+| `get_profile` | GET | *(session required)* | `{"user": {...}, "addresses": [...]}` |
+
+---
+
+## 🧭 Role-Based Navigation
+
+After login, the navigation bar dynamically adapts:
+
+| Role | Extra Nav Links |
+|---|---|
+| **Customer** | `Support` → `customer/support/my-tickets.php` |
+| **Restaurant Owner** | `Support` → `customer/support/my-tickets.php` |
+| **Admin** | `Support` + `Tickets` → `admin/support/tickets.php` + `Reports` → `admin/reports/` |
+
+---
+
+## 🔒 Security Model
+
+| Threat | Mitigation |
+|---|---|
+| SQL Injection | All queries use PDO prepared statements with named parameters |
+| XSS | All user-supplied output escaped via `sanitize_html()` (`htmlspecialchars`) |
+| CSRF | Support forms use `get_csrf_token()` / `validate_csrf_token()` |
+| Unauthorized access (Customer pages) | `require_customer_auth()` — redirects to `index.php` if not logged in |
+| Unauthorized access (Admin pages) | `require_admin_auth()` — redirects if `role !== Admin` |
+| Unauthorized exports | `require_admin_export_auth()` — returns HTTP 403 if unauthorized |
 
 ---
 
 ## 🚀 Setup & Launch Instructions
 
-### 1. Fast Portable Prototype (Zero Setup)
-The static edition is completely self-contained and runs instantly without any server or database configurations.
-1. Open [index.html](file:///c:/Users/prem/Desktop/what_if01/index.html) in any modern web browser.
-2. Sign up or log in, view the simulated OTP floating card in the bottom-right, and explore cart checkouts, visual step-progress tracking, and meal feedback.
+### Prerequisites
+- **PHP** ≥ 7.4 with `pdo_pgsql` and `pgsql` extensions enabled
+- **PostgreSQL** ≥ 12 running locally on port `5432`
+- **XAMPP** (or any local server) with Apache
 
-### 2. Built-in PHP Server Method (Fastest Dynamic Startup)
-If you already have PHP and PostgreSQL installed locally, this is the quickest method to run the dynamic version.
-1. Ensure your local PostgreSQL server is active.
-2. Open a terminal/command prompt inside the `what_if01` directory.
-3. Start the lightweight built-in PHP web server:
-   ```bash
-   php -S localhost:8000
-   ```
-4. Visit `http://localhost:8000/index.php` in your web browser. The backend will instantly connect, auto-create the database schemas, and seed menus.
+### Step 1 — Enable PostgreSQL in PHP (XAMPP)
+Open `php.ini` (via XAMPP → Config → PHP) and uncomment:
+```ini
+extension=pdo_pgsql
+extension=pgsql
+```
+Restart Apache after saving.
 
-### 3. Local Web Server Environment Method (XAMPP)
-For a complete local server admin dashboard experience:
-1. Copy the `what_if01` project folder into your server's web root (e.g. `C:/xampp/htdocs/what_if01` for XAMPP).
-2. **Install PostgreSQL Client Drivers in XAMPP**:
-   * Open the **XAMPP Control Panel**.
-   * Click **Config** next to **Apache** and select **PHP (php.ini)**.
-   * Search for `;extension=pdo_pgsql` and `;extension=pgsql` and remove the semicolons (`;`) at the beginning to uncomment them:
-     ```ini
-     extension=pdo_pgsql
-     extension=pgsql
-     ```
-   * Save the file.
-3. **Ensure `libpq.dll` is Loaded**:
-   * Add `C:\xampp\php` to your Windows System **PATH** environment variables, or open Apache's config (`httpd.conf`) in XAMPP and append:
-     ```apache
-     LoadFile "C:/xampp/php/libpq.dll"
-     ```
-4. **Configure Database Connection**:
-   * Open `index.php` in a text editor to update your PostgreSQL password around line 20:
-     ```php
-     define('DB_PASS', 'your_actual_password');
-     ```
-5. **Create the Database**:
-   * Open pgAdmin 4 or psql, and create your database:
-     ```sql
-     CREATE DATABASE whatif_db;
-     ```
-6. **Launch & Enjoy**:
-   * Restart Apache in the XAMPP Control Panel.
-   * Access the portal at `http://localhost/what_if01/index.php`. All tables and mock data are auto-generated on your first load!
-   * Access your data live at `http://localhost/what_if01/db-viewer.php`.
+### Step 2 — Create the Database
+Open pgAdmin 4 or `psql` and run:
+```sql
+CREATE DATABASE whatif_db;
+```
+
+### Step 3 — Configure Password
+Open `index.php` and update line ~20:
+```php
+define('DB_PASS', 'your_postgres_password');
+```
+
+### Step 4 — Place in Web Root & Launch
+Copy the `what_if01` folder into `C:/xampp/htdocs/` and visit:
+```
+http://localhost/what_if01/index.php
+```
+All tables, migrations, and seed data are created **automatically on first load**.
+
+### Alternative — PHP Built-in Server
+```bash
+cd what_if01
+php -S localhost:8000
+# Visit: http://localhost:8000/index.php
+```
 
 ---
 
-## 🛠️ Code Structure Sections
-The project is structurally structured with clear block comments to simplify editing:
-*   `db-viewer.php` — Seamless glassmorphic developer console to view database tables and schemas dynamically.
-*   `index.php` — Core dynamic application containing session controls, database migrations, premium seeder data, and AJAX router handlers.
-*   `index.html` — Portable static prototype for rapid interface testing and client presentations.
+## 🛠️ Developer Tools
 
+### PostgreSQL DB Inspector
+A full-featured, interactive database browser is included:
+```
+http://localhost/what_if01/dev-db-inspector.php
+```
+- Parses DB credentials automatically from `index.php`
+- Side panel shows all tables with live row counts
+- Inspect first 100 rows of any table
+- View full column schemas, types, constraints, and primary keys
+- Real-time search/filter within results
+
+> ⚠️ **For development use only.** Restrict access to this file in production environments.
+
+---
+
+## 🍽️ Seeded Restaurant Data (Bangalore)
+
+| Restaurant | Cuisine | Rating |
+|---|---|---|
+| Truffles | Burgers, American, Desserts | ⭐ 4.8 |
+| Natural Ice Cream | Ice Cream, Desserts, Shakes | ⭐ 4.9 |
+| Malgudi Café | South Indian, Filter Coffee | ⭐ 4.7 |
+| Social | Continental, North Indian, Drinks | ⭐ 4.6 |
+| Meghana Foods | Biryani, Kebabs, North Indian | ⭐ 4.5 |
+| The Hole in the Wall Café | Waffles, Continental | ⭐ 4.4 |
+| Vasudev Adigas | South Indian, Chaat, Snacks | ⭐ 4.3 |
+| Pizza Hut | Pizzas, Pastas, Garlic Breads | ⭐ 4.2 |
+
+### Active Coupon Codes
+| Code | Discount | Min Order |
+|---|---|---|
+| `WELCOME40` | 40% OFF | None |
+| `FLASH30` | 30% OFF | None |
+| `HDFC20` | 20% OFF | ₹400 |
+| `WEEKEND15` | 15% OFF | ₹250 |
+| `FREEDEL` | Free Delivery (₹29 OFF) | ₹299 |
+| `GOPRO` | ₹50 OFF | ₹199 |
+
+---
+
+## 📄 License
+
+This project is for educational and portfolio demonstration purposes.
+
+© 2026 What If Tech Foods Limited. All rights reserved.
