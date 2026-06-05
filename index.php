@@ -32,6 +32,10 @@ function respond_json($data, $status = 200) {
 try {
     $pdo = new PDO(DB_DSN, DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    // Auto-run schema migrations
+    require_once __DIR__ . '/includes/support-functions.php';
+    run_migrations($pdo);
 } catch (PDOException $e) {
     // Show a beautifully styled HTML error page with step-by-step setup instructions
     ?>
@@ -505,11 +509,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
         if (!$pdo) {
             // Mock Login
             $name = !empty($email) ? explode('@', $email)[0] : "User_" . substr($phone, -4);
+            $mock_role = (strpos($email, 'admin') !== false || $phone === '9999999999') ? 'Admin' : ((strpos($email, 'owner') !== false || $phone === '8888888888') ? 'Restaurant Owner' : 'Customer');
             $_SESSION['user'] = [
                 'id' => 999,
                 'name' => ucfirst($name),
                 'email' => !empty($email) ? $email : "user@example.com",
-                'phone' => !empty($phone) ? $phone : "9876543210"
+                'phone' => !empty($phone) ? $phone : "9876543210",
+                'role' => $mock_role
             ];
             respond_json(['success' => true, 'user' => $_SESSION['user']]);
         }
@@ -536,7 +542,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
             'id' => $user['id'],
             'name' => $user['name'],
             'email' => $user['email'],
-            'phone' => $user['phone']
+            'phone' => $user['phone'],
+            'role' => $user['role'] ?? 'Customer'
         ];
         
         respond_json(['success' => true, 'user' => $_SESSION['user']]);
@@ -602,14 +609,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
                 'id' => $userId,
                 'name' => $p['name'],
                 'email' => $p['email'],
-                'phone' => $p['phone']
+                'phone' => $p['phone'],
+                'role' => 'Customer'
             ];
         } else {
             $_SESSION['user'] = [
                 'id' => 999,
                 'name' => $p['name'],
                 'email' => $p['email'],
-                'phone' => $p['phone']
+                'phone' => $p['phone'],
+                'role' => 'Customer'
             ];
         }
         
@@ -842,6 +851,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
                     ':transaction_id' => $transactionId
                 ]);
 
+                // Insert initial delivery log record
+                $ins_d = $pdo->prepare("INSERT INTO deliveries (order_id, delivery_partner, status) VALUES (:order_id, 'Suresh Kumar', 'Assigned')");
+                $ins_d->execute([
+                    ':order_id' => $orderId
+                ]);
+
                 // Insert items with time and user name details
                 $ins_i = $pdo->prepare("INSERT INTO order_items (order_id, item_id, name, price, qty, user_name, user_phone, user_email) VALUES (:order_id, :item_id, :name, :price, :qty, :user_name, :user_phone, :user_email)");
                 foreach ($items as $item) {
@@ -917,6 +932,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($action)) {
         if ($pdo) {
             $stmt = $pdo->prepare("UPDATE orders SET status = :status WHERE id = :id");
             $stmt->execute([':status' => $status, ':id' => $orderId]);
+            
+            // If Delivered, also update the deliveries table
+            if ($status === 'Delivered') {
+                $stmt_d = $pdo->prepare("UPDATE deliveries SET status = 'Delivered', delivered_at = NOW() WHERE order_id = :order_id");
+                $stmt_d->execute([':order_id' => $orderId]);
+            }
             respond_json(['success' => true, 'order_id' => $orderId, 'status' => $status]);
         } else {
             respond_json(['success' => true, 'mock' => true]);
@@ -1943,6 +1964,16 @@ footer{background:#111;color:rgba(255,255,255,.65);padding:52px 40px 32px;}
           </div>
         </div>
 
+        <!-- Demo Logins Tooltip for Easy Testing -->
+        <div style="margin-top: 18px; padding: 14px; background: #fdfafb; border: 1.5px solid var(--border); border-radius: 12px; font-size: 12px; color: var(--muted); text-align: left;">
+            <strong style="color:var(--dark);"><i class="fas fa-key" style="color:var(--red); margin-right: 4px;"></i> Demo Seeded Logins (Role Testing):</strong>
+            <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                <div>• <strong>Admin:</strong> email <code>admin@whatif.com</code> or phone <code>9999999999</code></div>
+                <div>• <strong>Restaurant Owner:</strong> email <code>owner@whatif.com</code> or phone <code>8888888888</code></div>
+                <div>• <strong>Customer:</strong> auto-creates on login with any other details.</div>
+            </div>
+        </div>
+
         <div class="login-divider"><span>OR CONTINUE WITH</span></div>
         <div class="social-login-row">
           <button class="social-btn" onclick="socialLogin('Google')"><img src="https://www.svgrepo.com/show/475656/google-color.svg" width="18" height="18"> Google</button>
@@ -2033,6 +2064,16 @@ footer{background:#111;color:rgba(255,255,255,.65);padding:52px 40px 32px;}
             <span class="error-msg" id="rsi-email-err">Please fill this field.</span>
           </div>
           <button class="pay-now-btn" onclick="registerPageSignIn()"><i class="fas fa-sign-in-alt"></i> Verify via OTP</button>
+        </div>
+
+        <!-- Demo Logins Tooltip for Easy Testing -->
+        <div style="margin-top: 18px; padding: 14px; background: #fdfafb; border: 1.5px solid var(--border); border-radius: 12px; font-size: 12px; color: var(--muted); text-align: left;">
+            <strong style="color:var(--dark);"><i class="fas fa-key" style="color:var(--red); margin-right: 4px;"></i> Demo Seeded Logins (Role Testing):</strong>
+            <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                <div>• <strong>Admin:</strong> email <code>admin@whatif.com</code> or phone <code>9999999999</code></div>
+                <div>• <strong>Restaurant Owner:</strong> email <code>owner@whatif.com</code> or phone <code>8888888888</code></div>
+                <div>• <strong>Customer:</strong> auto-creates on login with any other details.</div>
+            </div>
         </div>
       </div>
     </div>
@@ -3327,6 +3368,7 @@ function completeLoginUI(name) {
   document.getElementById('nav-user-name').textContent = name.length > 10 ? name.slice(0,10)+'…' : name;
   document.getElementById('nav-signin-btn').style.display = 'none';
   document.getElementById('nav-user-pill').style.display = 'flex';
+  updateNavActionsUI();
 }
 
 function logoutUser() {
@@ -3336,9 +3378,43 @@ function logoutUser() {
       currentUser = null;
       document.getElementById('nav-signin-btn').style.display = 'block';
       document.getElementById('nav-user-pill').style.display = 'none';
+      updateNavActionsUI();
       toast('Signed out successfully.');
       showPage('register');
     });
+}
+
+function updateNavActionsUI() {
+  const dynClass = 'nav-dynamic-btn';
+  document.querySelectorAll('.' + dynClass).forEach(el => el.remove());
+  
+  if (currentUser) {
+    const ordersBtn = document.querySelector('#navActions button');
+    if (!ordersBtn) return;
+    
+    // All logged-in users have customer support center link
+    const supportBtn = document.createElement('button');
+    supportBtn.className = 'nav-btn nav-btn-ghost ' + dynClass;
+    supportBtn.innerHTML = '<i class="fas fa-headset"></i> Support';
+    supportBtn.onclick = () => window.location.href = 'customer/support/my-tickets.php';
+    ordersBtn.after(supportBtn);
+    
+    if (currentUser.role === 'Admin') {
+      // Tickets Management Link
+      const ticketsBtn = document.createElement('button');
+      ticketsBtn.className = 'nav-btn nav-btn-ghost ' + dynClass;
+      ticketsBtn.innerHTML = '<i class="fas fa-ticket-alt"></i> Tickets';
+      ticketsBtn.onclick = () => window.location.href = 'admin/support/tickets.php';
+      supportBtn.after(ticketsBtn);
+      
+      // Reports & Analytics Link
+      const reportsBtn = document.createElement('button');
+      reportsBtn.className = 'nav-btn nav-btn-ghost ' + dynClass;
+      reportsBtn.innerHTML = '<i class="fas fa-chart-bar"></i> Reports';
+      reportsBtn.onclick = () => window.location.href = 'admin/reports/';
+      ticketsBtn.after(reportsBtn);
+    }
+  }
 }
 
 // Register workflow
@@ -3644,6 +3720,7 @@ window.addEventListener('DOMContentLoaded', () => {
   } else {
     showPage('home');
   }
+  updateNavActionsUI();
 });
 </script>
 </body>
