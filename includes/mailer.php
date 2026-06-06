@@ -22,12 +22,12 @@ use PHPMailer\PHPMailer\Exception;
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
 define('SMTP_AUTH', true);
-define('SMTP_USER', 'placeholder@gmail.com'); // Put actual SMTP email here
-define('SMTP_PASS', 'placeholder_password');  // Put actual SMTP password here
+define('SMTP_USER', 'nivetha.s.1230@gmail.com'); // Put actual SMTP email here
+define('SMTP_PASS', 'fwfo amlf vneq evti');  // Put actual SMTP password here
 define('SMTP_SECURE', 'tls');
 define('FROM_EMAIL', 'support@whatif.com');
 define('FROM_NAME', 'What If Support');
-define('ADMIN_EMAIL', 'admin@whatif.com');
+define('ADMIN_EMAIL', 'nivetha.s.1230@gmail.com');
 
 /**
  * Dispatches HTML email. Falls back to writing to local file on failure.
